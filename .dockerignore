@@ -1,0 +1,4 @@
+*.md
+*.pyc
+.vscode/
+*.yaml
