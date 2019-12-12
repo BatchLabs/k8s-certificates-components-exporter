@@ -7,7 +7,6 @@ import ssl
 import subprocess
 import tempfile
 
-letters = re.compile(r'[A-Za-z]+\s+')
 spaces = re.compile(r'\s+')
 
 beg = re.compile('BEGIN CERTIFICATE')
@@ -24,7 +23,7 @@ def get_certificate(base_url, logger, port=443):
 
         temp = r.communicate()[0].decode()
         cert = []
-
+        logger.debug('Successfully retrieved certificate from %s' % base_url)
         found = False
 
         for line in temp.split('\n'):
@@ -39,6 +38,7 @@ def get_certificate(base_url, logger, port=443):
 
         ret['cert'] = c
         ret['status'] = True
+        logger.debug('Cert is : %s' % c)
 
         return ret
 
@@ -59,23 +59,19 @@ def check_expiry(data, logger):
         t.close()
         cert_dict = ssl._ssl._test_decode_cert(t.name)
 
-        # """
-        # sample date format
-        # Mar 31 14:22:00 2020 GMT
-
-        # """
 
         d = cert_dict['notAfter']
-        d = re.sub(letters, '', d)
         d = re.sub(spaces, ':', d)
 
-        fmt = "%d:%H:%M:%S:%Y:%Z"
-
+        fmt = "%b:%d:%H:%M:%S:%Y:%Z"
+        logger.debug('Non formatted retrieved date is %s' % str(d))
         date_ob = datetime.datetime.strptime(d, fmt)
         today = datetime.datetime.today()
+        logger.debug('Observed date is %s' % str(date_ob))
 
         diff = date_ob - today
         data['days_left'] = diff.days
+        logger.debug('Observed days left is %s' % str(data['days_left']))
 
         return data
 
@@ -85,11 +81,3 @@ def check_expiry(data, logger):
         logger.error('Failed to retrieve date from certificate', exc_info=True)
 
         return data
-
-
-if __name__ == "__main__":
-    import testing_logger_config
-    logger = testing_logger_config.get_logger()
-    base_url = 'api-kube-staging-01.b47ch.com'
-    logger.info('Starting test for %s...' % __file__)
-    logger.info(check_expiry(get_certificate(base_url, logger), logger))
